@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
 	"io"
 	"net/http"
@@ -11,19 +12,29 @@ import (
 
 const (
 	host     = "localhost"
-	port     = "6060"
+	port     = "8080"
 	user     = "admin"
 	password = "password"
 	dbname   = "json"
 )
 
+func addCorsHeader(res http.ResponseWriter, req *http.Request) {
+	headers := res.Header()
+	headers.Add("Access-Control-Allow-Origin", req.Header.Get("Origin"))
+	headers.Add("Access-Control-Allow-Headers", "access-control-allow-origin")
+	headers.Add("Access-Control-Allow-Methods", "POST")
+
+}
+
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/upload", handleUpload)
+
+	//mux := http.NewServeMux()
+	router := mux.NewRouter()
+	router.HandleFunc("/upload", handleUpload).Methods("OPTIONS", "POST")
 
 	httpServer := http.Server{
 		Addr:    ":6060",
-		Handler: mux,
+		Handler: router,
 	}
 
 	err := httpServer.ListenAndServe()
@@ -34,6 +45,15 @@ func main() {
 }
 
 func handleUpload(w http.ResponseWriter, r *http.Request) {
+	addCorsHeader(w, r)
+	//fmt.Println(r.Header)
+	if r.Method == "OPTIONS" {
+
+		//fmt.Println("net")
+		return
+	}
+	//w.Header().Set("Access-Control-Allow-Origin", "*")
+	//w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	// Parse the multipart form containing both JSON data and file
 	err := r.ParseMultipartForm(50 << 20) // Limit the size to 10 MB
 	if err != nil {
@@ -77,4 +97,6 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println("File uploaded successfully", handler.Filename)
+	//Allow CORS here By * or specific origin
+
 }

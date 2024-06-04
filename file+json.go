@@ -61,8 +61,17 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Accessing the uploaded file
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Error retrieving the file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
 	// Accessing JSON data from the form
 	jsonData := r.FormValue("json_data")
+	jsonData = jsonData[:len(jsonData)-1] + "," + "\"src\":" + " " + "\"" + handler.Filename + "\"" + "}"
 	fmt.Println("JSON Data:", jsonData)
 	urlExample := "postgres://" + user + ":" + password + "@" + host + ":" + port + "/" + dbname
 	conn, err := pgx.Connect(context.Background(), urlExample)
@@ -72,14 +81,6 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close(context.Background())
 	conn.Exec(context.Background(), "INSERT INTO cache (user_data) values ($1)", jsonData)
-
-	// Accessing the uploaded file
-	file, handler, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, "Error retrieving the file", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
 
 	// Create a new file to store the uploaded file
 	f, err := os.OpenFile(handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
